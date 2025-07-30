@@ -1,3 +1,4 @@
+// App.tsx
 import './global.css';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, View, Text, ActivityIndicator } from 'react-native';
@@ -20,7 +21,7 @@ const App = (): React.ReactElement => {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <HomeScreen />
-      <StatusBar style="light" backgroundColor="#121212" />
+      <StatusBar style="light" />
     </SafeAreaView>
   );
 };

@@ -1,13 +1,28 @@
-// App.tsx
 import './global.css';
 import { StatusBar } from 'expo-status-bar';
-import { Text, View } from 'react-native';
+import { SafeAreaView, View, Text, ActivityIndicator } from 'react-native';
+import { useDatabase } from './src/hooks/useDatabase';
+import HomeScreen from './src/screens/HomeScreen';
 
-export default function App() {
+const App = (): React.ReactElement => {
+  const { isDBLoading } = useDatabase();
+
+  if (isDBLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text className="mt-4 text-onBackground">Inicializando...</Text>
+        <StatusBar style="light" />
+      </View>
+    );
+  }
+
   return (
-    <View className="flex-1 items-center justify-center bg-slate-600">
-      <Text className="text-white text-2xl">Tailwind está funcionando!</Text>
-      <StatusBar style="light" />
-    </View>
+    <SafeAreaView className="flex-1 bg-background">
+      <HomeScreen />
+      <StatusBar style="light" backgroundColor="#121212" />
+    </SafeAreaView>
   );
-}
+};
+
+export default App;

@@ -14,7 +14,7 @@
     "expo-camera": "^16.1.11",
     "expo-file-system": "^18.1.11",
     "expo-sharing": "^13.1.5",
-    "expo-sqlite": "^15.2.14",
+    "expo-sqlite": "~15.2.14",
     "expo-status-bar": "~2.2.3",
     "lucide-react-native": "^0.534.0",
     "nativewind": "^4.1.23",

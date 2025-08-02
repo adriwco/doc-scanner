@@ -1,3 +1,4 @@
+// src/screens/HomeScreen.tsx
 import React from 'react';
 import {
   View,
@@ -5,34 +6,39 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Camera, FilePlus } from 'lucide-react-native';
 import { useDatabase } from '../hooks/useDatabase';
 import DocumentListItem from '../components/DocumentListItem';
+import type { AppNavigationProp } from '../navigation/AppNavigator';
 
 const HomeScreen = (): React.ReactElement => {
   const { documents, isDBLoading, loadDocuments } = useDatabase();
+  const navigation = useNavigation<AppNavigationProp>();
 
   const handleScanPress = (): void => {
-    console.log('Navegando para a tela da câmera...');
+    navigation.navigate('Scanner');
   };
 
   const renderContent = () => {
-    if (isDBLoading) {
+    if (isDBLoading && documents.length === 0) {
       return (
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#3B82F6" />
-          <Text className="text-gray-700 mt-3">Carregando documentos...</Text>
         </View>
       );
     }
 
     if (documents.length === 0) {
       return (
-        <View className="flex-1 justify-center items-center">
+        <View className="flex-1 justify-center items-center p-4">
           <FilePlus size={80} color="#4A4A4A" />
-          <Text className="text-xl text-gray-800 mt-4">Nenhum documento</Text>
-          <Text className="text-base text-gray-500 text-center mt-2">
+          <Text className="text-xl text-onBackground font-bold mt-4">
+            Nenhum Documento
+          </Text>
+          <Text className="text-base text-onSurface text-center mt-2">
             Toque no ícone da câmera para {'\n'} escanear seu primeiro
             documento.
           </Text>
@@ -50,7 +56,7 @@ const HomeScreen = (): React.ReactElement => {
             onPress={() => console.log('Abrir documento:', item.id)}
           />
         )}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 100, paddingTop: 16 }}
         showsVerticalScrollIndicator={false}
         onRefresh={loadDocuments}
         refreshing={isDBLoading}
@@ -59,26 +65,28 @@ const HomeScreen = (): React.ReactElement => {
   };
 
   return (
-    <View className="flex-1 p-6 bg-gray-50">
-      {/* Cabeçalho */}
-      <View className="flex-row justify-between items-center mb-8">
-        <Text className="text-3xl font-bold text-gray-900">
-          Seus Documentos
-        </Text>
+    <SafeAreaView className="flex-1 bg-background">
+      <View className="flex-1 p-6">
+        {/* Cabeçalho */}
+        <View className="flex-row justify-between items-center mb-4">
+          <Text className="text-3xl font-bold text-onPrimary">
+            Seus Documentos
+          </Text>
+        </View>
+
+        {/* Conteúdo dinâmico */}
+        {renderContent()}
+
+        {/* Botão Flutuante de Ação (FAB) */}
+        <TouchableOpacity
+          onPress={handleScanPress}
+          className="absolute bottom-10 right-6 bg-primary h-16 w-16 rounded-full justify-center items-center shadow-lg"
+          activeOpacity={0.8}
+        >
+          <Camera size={28} color="white" />
+        </TouchableOpacity>
       </View>
-
-      {/* Conteúdo dinâmico */}
-      {renderContent()}
-
-      {/* Botão Flutuante de Ação (FAB) */}
-      <TouchableOpacity
-        onPress={handleScanPress}
-        className="absolute bottom-10 right-6 bg-blue-500 h-16 w-16 rounded-full justify-center items-center shadow-lg"
-        activeOpacity={0.8}
-      >
-        <Camera size={28} color="white" />
-      </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 

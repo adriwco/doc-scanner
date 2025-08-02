@@ -1,9 +1,10 @@
 // App.tsx
 import './global.css';
+import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView, View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { useDatabase } from './src/hooks/useDatabase';
-import HomeScreen from './src/screens/HomeScreen';
+import AppNavigator from './src/navigation/AppNavigator';
 
 const App = (): React.ReactElement => {
   const { isDBLoading } = useDatabase();
@@ -19,10 +20,10 @@ const App = (): React.ReactElement => {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <HomeScreen />
+    <>
+      <AppNavigator />
       <StatusBar style="light" />
-    </SafeAreaView>
+    </>
   );
 };
 

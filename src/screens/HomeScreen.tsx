@@ -7,6 +7,7 @@ import {
   FlatList,
   ActivityIndicator,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Camera, FilePlus } from 'lucide-react-native';
@@ -15,7 +16,12 @@ import DocumentListItem from '../components/DocumentListItem';
 import type { AppNavigationProp } from '../navigation/AppNavigator';
 
 const HomeScreen = (): React.ReactElement => {
-  const { documents, isDBLoading, loadDocuments } = useDatabase();
+  const {
+    documents,
+    isDBLoading,
+    loadDocuments,
+    removeDocument: deleteDocumentFromDb,
+  } = useDatabase();
   const navigation = useNavigation<AppNavigationProp>();
 
   const handleScanPress = (): void => {
@@ -24,6 +30,30 @@ const HomeScreen = (): React.ReactElement => {
 
   const handleOpenDocument = (documentId: number) => {
     navigation.navigate('DocumentDetail', { documentId });
+  };
+
+  const handleDeleteDocument = (document: { id: number; name: string }) => {
+    Alert.alert(
+      'Excluir Documento',
+      `Tem certeza que deseja excluir "${document.name}"? Esta ação não pode ser desfeita.`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Excluir',
+          onPress: async () => {
+            try {
+              await deleteDocumentFromDb(document.id);
+            } catch (error) {
+              Alert.alert('Erro', 'Não foi possível excluir o documento.');
+            }
+          },
+          style: 'destructive',
+        },
+      ],
+    );
   };
 
   const renderContent = () => {
@@ -58,6 +88,7 @@ const HomeScreen = (): React.ReactElement => {
           <DocumentListItem
             item={item}
             onPress={() => handleOpenDocument(item.id)}
+            onDelete={() => handleDeleteDocument(item)}
           />
         )}
         contentContainerStyle={{ paddingBottom: 100, paddingTop: 16 }}

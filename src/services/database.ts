@@ -1,6 +1,7 @@
 // src/services/database.ts
 import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
 
 export interface Document {
   id: number;
@@ -20,11 +21,10 @@ export interface Page {
 function openDatabase(): SQLite.SQLiteDatabase {
   if (Platform.OS === 'web') {
     console.warn('Expo SQLite não é suportado na web, usando um mock.');
-
     return {
       execAsync: async () => [],
       runAsync: async () => ({ lastInsertRowId: 1, changes: 1 }),
-      getAsync: async () => null,
+      getFirstAsync: async () => null,
       getAllAsync: async () => [],
       closeAsync: async () => {},
       execSync: () => [],
@@ -34,7 +34,6 @@ function openDatabase(): SQLite.SQLiteDatabase {
       closeSync: () => {},
     } as unknown as SQLite.SQLiteDatabase;
   }
-
   const db = SQLite.openDatabaseSync('doc-scanner.db');
   return db;
 }
@@ -81,7 +80,6 @@ export const addDocument = async (
       doc.coverUri,
     );
     documentId = result.lastInsertRowId;
-
     for (const page of pages) {
       await db.runAsync(
         'INSERT INTO pages (documentId, uri, pageNumber) VALUES (?, ?, ?)',
@@ -102,10 +100,9 @@ export const addDocument = async (
 
 export const getDocuments = async (): Promise<Document[]> => {
   try {
-    const allRows = await db.getAllAsync<Document>(
+    return await db.getAllAsync<Document>(
       'SELECT * FROM documents ORDER BY createdAt DESC',
     );
-    return allRows;
   } catch (error) {
     console.error('Erro ao buscar documentos:', error);
     throw error;
@@ -131,8 +128,25 @@ export const getPagesForDocument = async (
 
 export const deleteDocument = async (id: number): Promise<void> => {
   try {
+    const docToDelete = await db.getFirstAsync<Document>(
+      'SELECT * FROM documents WHERE id = ?',
+      id,
+    );
+
     const result = await db.runAsync('DELETE FROM documents WHERE id = ?', id);
-    if (result.changes === 0) {
+
+    if (result.changes > 0 && docToDelete?.coverUri) {
+      const docDir = docToDelete.coverUri.substring(
+        0,
+        docToDelete.coverUri.lastIndexOf('/'),
+      );
+      await FileSystem.deleteAsync(docDir, { idempotent: true });
+      console.log(`Pasta do documento ${id} deletada: ${docDir}`);
+    } else if (result.changes > 0) {
+      console.log(
+        `Documento ${id} deletado do banco de dados, mas sem URI de capa para limpar.`,
+      );
+    } else {
       console.warn('Documento não encontrado para deleção.');
     }
   } catch (error) {

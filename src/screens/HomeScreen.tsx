@@ -22,6 +22,10 @@ const HomeScreen = (): React.ReactElement => {
     navigation.navigate('Scanner');
   };
 
+  const handleOpenDocument = (documentId: number) => {
+    navigation.navigate('DocumentDetail', { documentId });
+  };
+
   const renderContent = () => {
     if (isDBLoading && documents.length === 0) {
       return (
@@ -53,7 +57,7 @@ const HomeScreen = (): React.ReactElement => {
         renderItem={({ item }) => (
           <DocumentListItem
             item={item}
-            onPress={() => console.log('Abrir documento:', item.id)}
+            onPress={() => handleOpenDocument(item.id)}
           />
         )}
         contentContainerStyle={{ paddingBottom: 100, paddingTop: 16 }}
@@ -67,17 +71,14 @@ const HomeScreen = (): React.ReactElement => {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="flex-1 p-6">
-        {/* Cabeçalho */}
         <View className="flex-row justify-between items-center mb-4">
           <Text className="text-3xl font-bold text-onPrimary">
             Seus Documentos
           </Text>
         </View>
 
-        {/* Conteúdo dinâmico */}
         {renderContent()}
 
-        {/* Botão Flutuante de Ação (FAB) */}
         <TouchableOpacity
           onPress={handleScanPress}
           className="absolute bottom-10 right-6 bg-primary h-16 w-16 rounded-full justify-center items-center shadow-lg"

@@ -3,6 +3,7 @@ import './global.css';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, ActivityIndicator } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useDatabase } from './src/hooks/useDatabase';
 import AppNavigator from './src/navigation/AppNavigator';
 
@@ -20,10 +21,10 @@ const App = (): React.ReactElement => {
   }
 
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <AppNavigator />
       <StatusBar style="light" />
-    </>
+    </GestureHandlerRootView>
   );
 };
 

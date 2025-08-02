@@ -57,7 +57,7 @@ export const useDatabase = () => {
     }
   };
 
-  const getPages = async (documentId: number): Promise<Page[]> => {
+  const getPages = useCallback(async (documentId: number): Promise<Page[]> => {
     try {
       return await dbGetPages(documentId);
     } catch (error) {
@@ -67,7 +67,7 @@ export const useDatabase = () => {
       );
       return [];
     }
-  };
+  }, []);
 
   return {
     documents,

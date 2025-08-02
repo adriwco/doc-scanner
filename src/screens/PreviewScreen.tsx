@@ -8,12 +8,14 @@ import {
   Image,
   SafeAreaView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { ArrowLeft, Save } from 'lucide-react-native';
 import DraggableFlatList, {
   RenderItemParams,
 } from 'react-native-draggable-flatlist';
+import * as FileSystem from 'expo-file-system';
 import { useDatabase } from '../hooks/useDatabase';
 import type {
   AppNavigationProp,
@@ -30,10 +32,10 @@ interface ImageItem {
 const PreviewScreen = (): React.ReactElement => {
   const navigation = useNavigation<AppNavigationProp>();
   const route = useRoute<PreviewScreenRouteProp>();
-  const { createNewDocument } = useDatabase(); // Obtenha a função para criar documentos
+  const { createNewDocument } = useDatabase();
 
-  const initialImages: ImageItem[] = route.params.images.map((uri) => ({
-    key: `image-${uri}`,
+  const initialImages: ImageItem[] = route.params.images.map((uri, index) => ({
+    key: `image-${index}-${uri}`,
     uri,
   }));
 
@@ -51,19 +53,36 @@ const PreviewScreen = (): React.ReactElement => {
     setIsSaving(true);
 
     try {
+      const docDir = `${FileSystem.documentDirectory}docs/${Date.now()}/`;
+      await FileSystem.makeDirectoryAsync(docDir, { intermediates: true });
+
+      const savedPages = [];
+      let coverUri = '';
+
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        const newUri = `${docDir}page_${i}.jpg`;
+        await FileSystem.copyAsync({ from: page.uri, to: newUri });
+        savedPages.push({ uri: newUri, pageNumber: i + 1 });
+        if (i === 0) {
+          coverUri = newUri;
+        }
+      }
+
       const newDocData = {
         name: documentName.trim(),
         createdAt: new Date().toISOString(),
-        totalPages: pages.length,
-        coverUri: pages[0]?.uri || '',
+        totalPages: savedPages.length,
+        coverUri: coverUri,
       };
 
-      await createNewDocument(newDocData);
+      await createNewDocument(newDocData, savedPages);
 
       navigation.navigate('Home');
     } catch (error) {
       console.error('Erro ao salvar o documento:', error);
       Alert.alert('Erro', 'Não foi possível salvar o documento.');
+    } finally {
       setIsSaving(false);
     }
   };
@@ -87,7 +106,7 @@ const PreviewScreen = (): React.ReactElement => {
           resizeMode="cover"
         />
         <Text className="text-onSurface flex-1">
-          Página {pages.indexOf(item) + 1}
+          Página {pages.findIndex((p) => p.key === item.key) + 1}
         </Text>
       </TouchableOpacity>
     );
@@ -108,7 +127,11 @@ const PreviewScreen = (): React.ReactElement => {
             disabled={isSaving}
             className="p-2"
           >
-            <Save size={28} color={isSaving ? '#888' : '#3B82F6'} />
+            {isSaving ? (
+              <ActivityIndicator color="#3B82F6" />
+            ) : (
+              <Save size={28} color="#3B82F6" />
+            )}
           </TouchableOpacity>
         </View>
 

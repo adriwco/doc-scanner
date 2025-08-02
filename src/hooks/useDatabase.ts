@@ -1,10 +1,13 @@
+// src/hooks/useDatabase.ts
 import { useState, useEffect, useCallback } from 'react';
 import {
   initDatabase,
   getDocuments,
-  addDocument,
+  addDocument as dbAddDocument,
   deleteDocument as dbDeleteDocument,
+  getPagesForDocument as dbGetPages,
   type Document,
+  type Page,
 } from '../services/database';
 
 export const useDatabase = () => {
@@ -32,10 +35,11 @@ export const useDatabase = () => {
   }, [loadDocuments]);
 
   const createNewDocument = async (
-    newDocData: Omit<Document, 'id'>,
+    docData: Omit<Document, 'id'>,
+    pagesData: Omit<Page, 'id' | 'documentId'>[],
   ): Promise<void> => {
     try {
-      await addDocument(newDocData);
+      await dbAddDocument(docData, pagesData);
       await loadDocuments();
     } catch (error) {
       console.error('Erro ao adicionar novo documento:', error);
@@ -53,11 +57,24 @@ export const useDatabase = () => {
     }
   };
 
+  const getPages = async (documentId: number): Promise<Page[]> => {
+    try {
+      return await dbGetPages(documentId);
+    } catch (error) {
+      console.error(
+        `Falha ao carregar as páginas do documento ${documentId}.`,
+        error,
+      );
+      return [];
+    }
+  };
+
   return {
     documents,
     isDBLoading,
     loadDocuments,
     createNewDocument,
     removeDocument,
+    getPages,
   };
 };

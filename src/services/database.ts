@@ -10,6 +10,13 @@ export interface Document {
   coverUri: string;
 }
 
+export interface Page {
+  id: number;
+  documentId: number;
+  uri: string;
+  pageNumber: number;
+}
+
 function openDatabase(): SQLite.SQLiteDatabase {
   if (Platform.OS === 'web') {
     console.warn('Expo SQLite não é suportado na web, usando um mock.');
@@ -34,10 +41,6 @@ function openDatabase(): SQLite.SQLiteDatabase {
 
 const db = openDatabase();
 
-/**
- * Inicializa o banco de dados.
- * Usa execAsync para rodar o comando CREATE TABLE.
- */
 export const initDatabase = async (): Promise<void> => {
   try {
     await db.execAsync(`
@@ -49,6 +52,13 @@ export const initDatabase = async (): Promise<void> => {
         totalPages INTEGER NOT NULL,
         coverUri TEXT
       );
+      CREATE TABLE IF NOT EXISTS pages (
+        id INTEGER PRIMARY KEY NOT NULL,
+        documentId INTEGER NOT NULL,
+        uri TEXT NOT NULL,
+        pageNumber INTEGER NOT NULL,
+        FOREIGN KEY (documentId) REFERENCES documents(id) ON DELETE CASCADE
+      );
     `);
     console.log('Banco de dados inicializado com sucesso');
   } catch (error) {
@@ -57,13 +67,11 @@ export const initDatabase = async (): Promise<void> => {
   }
 };
 
-/**
- * Adiciona um novo documento.
- * Usa runAsync para inserir dados e retorna o ID do novo registro.
- */
 export const addDocument = async (
   doc: Omit<Document, 'id'>,
+  pages: Omit<Page, 'id' | 'documentId'>[],
 ): Promise<number> => {
+  let documentId: number | null = null;
   try {
     const result = await db.runAsync(
       'INSERT INTO documents (name, createdAt, totalPages, coverUri) VALUES (?, ?, ?, ?)',
@@ -72,17 +80,26 @@ export const addDocument = async (
       doc.totalPages,
       doc.coverUri,
     );
-    return result.lastInsertRowId;
+    documentId = result.lastInsertRowId;
+
+    for (const page of pages) {
+      await db.runAsync(
+        'INSERT INTO pages (documentId, uri, pageNumber) VALUES (?, ?, ?)',
+        documentId,
+        page.uri,
+        page.pageNumber,
+      );
+    }
+    return documentId;
   } catch (error) {
-    console.error('Erro ao adicionar documento:', error);
+    console.error('Erro ao adicionar documento e páginas:', error);
+    if (documentId) {
+      await deleteDocument(documentId);
+    }
     throw error;
   }
 };
 
-/**
- * Obtém todos os documentos.
- * Usa getAllAsync para buscar todos os registros. O tipo de retorno já é um array de objetos.
- */
 export const getDocuments = async (): Promise<Document[]> => {
   try {
     const allRows = await db.getAllAsync<Document>(
@@ -95,37 +112,28 @@ export const getDocuments = async (): Promise<Document[]> => {
   }
 };
 
-/**
- * Atualiza um documento.
- * Usa runAsync para a operação de UPDATE.
- */
-export const updateDocument = async (doc: Document): Promise<void> => {
+export const getPagesForDocument = async (
+  documentId: number,
+): Promise<Page[]> => {
   try {
-    const result = await db.runAsync(
-      'UPDATE documents SET name = ?, totalPages = ?, coverUri = ? WHERE id = ?',
-      doc.name,
-      doc.totalPages,
-      doc.coverUri,
-      doc.id,
+    return await db.getAllAsync<Page>(
+      'SELECT * FROM pages WHERE documentId = ? ORDER BY pageNumber ASC',
+      documentId,
     );
-    if (result.changes === 0) {
-      throw new Error('Documento não encontrado para atualização.');
-    }
   } catch (error) {
-    console.error('Erro ao atualizar documento:', error);
+    console.error(
+      `Erro ao buscar páginas para o documento ${documentId}:`,
+      error,
+    );
     throw error;
   }
 };
 
-/**
- * Remove um documento.
- * Usa runAsync para a operação de DELETE.
- */
 export const deleteDocument = async (id: number): Promise<void> => {
   try {
     const result = await db.runAsync('DELETE FROM documents WHERE id = ?', id);
     if (result.changes === 0) {
-      throw new Error('Documento não encontrado para deleção.');
+      console.warn('Documento não encontrado para deleção.');
     }
   } catch (error) {
     console.error('Erro ao deletar documento:', error);

@@ -11,11 +11,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { ArrowLeft, Save, Edit3 } from 'lucide-react-native';
+import { ArrowLeft, Save, Edit3, FileText } from 'lucide-react-native';
 import DraggableFlatList, {
   RenderItemParams,
 } from 'react-native-draggable-flatlist';
 import * as FileSystem from 'expo-file-system';
+import Ocr from 'react-native-mlkit-ocr';
 import { useDatabase } from '../hooks/useDatabase';
 import type {
   AppNavigationProp,
@@ -27,6 +28,10 @@ type PreviewScreenRouteProp = RouteProp<RootStackParamList, 'Preview'>;
 interface ImageItem {
   key: string;
   uri: string;
+}
+
+interface OcrResultBlock {
+  text: string;
 }
 
 const PreviewScreen = (): React.ReactElement => {
@@ -68,32 +73,39 @@ const PreviewScreen = (): React.ReactElement => {
       const docDir = `${FileSystem.documentDirectory}docs/${Date.now()}/`;
       await FileSystem.makeDirectoryAsync(docDir, { intermediates: true });
 
-      const savedPages = [];
       let coverUri = '';
 
-      for (let i = 0; i < pages.length; i++) {
-        const page = pages[i];
+      const ocrPromises = pages.map(async (page, i) => {
         const newUri = `${docDir}page_${i}.jpg`;
         await FileSystem.copyAsync({ from: page.uri, to: newUri });
-        savedPages.push({ uri: newUri, pageNumber: i + 1 });
+
+        const ocrResult: OcrResultBlock[] = await Ocr.detectFromUri(newUri);
+        const textContent = ocrResult
+          .map((block: OcrResultBlock) => block.text)
+          .join('\n');
+
         if (i === 0) {
           coverUri = newUri;
         }
-      }
+
+        return { uri: newUri, pageNumber: i + 1, textContent };
+      });
+
+      const processedPages = await Promise.all(ocrPromises);
 
       const newDocData = {
         name: documentName.trim(),
         createdAt: new Date().toISOString(),
-        totalPages: savedPages.length,
+        totalPages: processedPages.length,
         coverUri: coverUri,
       };
 
-      await createNewDocument(newDocData, savedPages);
+      await createNewDocument(newDocData, processedPages);
 
       navigation.navigate('Home');
     } catch (error) {
       console.error('Erro ao salvar o documento:', error);
-      Alert.alert('Erro', 'Não foi possível salvar o documento.');
+      Alert.alert('Erro', 'Não foi possível salvar e processar o documento.');
     } finally {
       setIsSaving(false);
     }
@@ -164,6 +176,15 @@ const PreviewScreen = (): React.ReactElement => {
           placeholderTextColor="#888"
           className="bg-surface text-onSurface text-lg p-4 rounded-xl mb-6"
         />
+
+        {isSaving && (
+          <View className="flex-row items-center justify-center my-4">
+            <FileText size={18} color="#A855F7" />
+            <Text className="text-secondary ml-2">
+              Processando texto das imagens...
+            </Text>
+          </View>
+        )}
 
         <DraggableFlatList
           data={pages}

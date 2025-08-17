@@ -1,5 +1,5 @@
 // src/screens/HomeScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,26 +8,34 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Alert,
+  TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Camera, FilePlus } from 'lucide-react-native';
+import { Camera, FilePlus, Search, X } from 'lucide-react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useDatabase } from '../hooks/useDatabase';
 import DocumentListItem from '../components/DocumentListItem';
 import type { AppNavigationProp } from '../navigation/AppNavigator';
 import type { Document } from '../services/database';
+import { useDebounce } from '../hooks/useDebounce';
 
 const HomeScreen = (): React.ReactElement => {
   const {
     documents,
     isDBLoading,
-    loadDocuments,
     removeDocument: deleteDocumentFromDb,
     getPages,
+    searchDocuments,
   } = useDatabase();
   const navigation = useNavigation<AppNavigationProp>();
   const [sharingId, setSharingId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  useEffect(() => {
+    searchDocuments(debouncedSearchQuery);
+  }, [debouncedSearchQuery, searchDocuments]);
 
   const handleScanPress = (): void => {
     navigation.navigate('Scanner');
@@ -42,10 +50,7 @@ const HomeScreen = (): React.ReactElement => {
       'Excluir Documento',
       `Tem certeza que deseja excluir "${document.name}"? Esta ação não pode ser desfeita.`,
       [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
+        { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Excluir',
           onPress: async () => {
@@ -87,16 +92,7 @@ const HomeScreen = (): React.ReactElement => {
 
       const { uri: pdfUri } = await Print.printToFileAsync({
         html: htmlContent,
-        base64: false,
       });
-
-      if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert(
-          'Compartilhamento indisponível',
-          'Não é possível compartilhar arquivos neste dispositivo.',
-        );
-        return;
-      }
 
       await Sharing.shareAsync(pdfUri, {
         mimeType: 'application/pdf',
@@ -104,17 +100,14 @@ const HomeScreen = (): React.ReactElement => {
       });
     } catch (error) {
       console.error('Erro ao gerar ou compartilhar PDF:', error);
-      Alert.alert(
-        'Erro',
-        'Não foi possível gerar o PDF para compartilhamento.',
-      );
+      Alert.alert('Erro', 'Não foi possível gerar o PDF.');
     } finally {
       setSharingId(null);
     }
   };
 
   const renderContent = () => {
-    if (isDBLoading && documents.length === 0) {
+    if (isDBLoading) {
       return (
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#3B82F6" />
@@ -127,11 +120,12 @@ const HomeScreen = (): React.ReactElement => {
         <View className="flex-1 justify-center items-center p-4">
           <FilePlus size={80} color="#4A4A4A" />
           <Text className="text-xl text-onBackground font-bold mt-4">
-            Nenhum Documento
+            {searchQuery ? 'Nenhum Resultado' : 'Nenhum Documento'}
           </Text>
           <Text className="text-base text-onSurface text-center mt-2">
-            Toque no ícone da câmera para {'\n'} escanear seu primeiro
-            documento.
+            {searchQuery
+              ? 'Tente uma busca diferente.'
+              : 'Toque na câmera para escanear.'}
           </Text>
         </View>
       );
@@ -152,8 +146,6 @@ const HomeScreen = (): React.ReactElement => {
         )}
         contentContainerStyle={{ paddingBottom: 100, paddingTop: 16 }}
         showsVerticalScrollIndicator={false}
-        onRefresh={loadDocuments}
-        refreshing={isDBLoading}
       />
     );
   };
@@ -165,6 +157,22 @@ const HomeScreen = (): React.ReactElement => {
           <Text className="text-3xl font-bold text-onPrimary">
             Seus Documentos
           </Text>
+        </View>
+
+        <View className="flex-row items-center bg-surface rounded-xl px-4 mb-4">
+          <Search size={20} color="#888" />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Buscar por nome ou conteúdo..."
+            placeholderTextColor="#888"
+            className="flex-1 text-onSurface p-3"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <X size={20} color="#888" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {renderContent()}

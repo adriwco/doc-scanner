@@ -6,6 +6,7 @@ import {
   addDocument as dbAddDocument,
   deleteDocument as dbDeleteDocument,
   getPagesForDocument as dbGetPages,
+  searchDocumentsByText as dbSearch,
   type Document,
   type Page,
 } from '../services/database';
@@ -16,7 +17,6 @@ export const useDatabase = () => {
 
   const loadDocuments = useCallback(async () => {
     try {
-      setIsDBLoading(true);
       await initDatabase();
       const docs = await getDocuments();
       setDocuments(docs);
@@ -57,6 +57,18 @@ export const useDatabase = () => {
     }
   };
 
+  const searchDocuments = async (query: string): Promise<void> => {
+    try {
+      setIsDBLoading(true);
+      const docs = await dbSearch(query);
+      setDocuments(docs);
+    } catch (error) {
+      console.error('Falha ao buscar documentos.', error);
+    } finally {
+      setIsDBLoading(false);
+    }
+  };
+
   const getPages = useCallback(async (documentId: number): Promise<Page[]> => {
     try {
       return await dbGetPages(documentId);
@@ -76,5 +88,6 @@ export const useDatabase = () => {
     createNewDocument,
     removeDocument,
     getPages,
+    searchDocuments,
   };
 };

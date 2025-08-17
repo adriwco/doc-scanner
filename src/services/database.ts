@@ -16,6 +16,7 @@ export interface Page {
   documentId: number;
   uri: string;
   pageNumber: number;
+  textContent: string;
 }
 
 function openDatabase(): SQLite.SQLiteDatabase {
@@ -56,6 +57,7 @@ export const initDatabase = async (): Promise<void> => {
         documentId INTEGER NOT NULL,
         uri TEXT NOT NULL,
         pageNumber INTEGER NOT NULL,
+        textContent TEXT, -- Nova coluna
         FOREIGN KEY (documentId) REFERENCES documents(id) ON DELETE CASCADE
       );
     `);
@@ -82,10 +84,11 @@ export const addDocument = async (
     documentId = result.lastInsertRowId;
     for (const page of pages) {
       await db.runAsync(
-        'INSERT INTO pages (documentId, uri, pageNumber) VALUES (?, ?, ?)',
+        'INSERT INTO pages (documentId, uri, pageNumber, textContent) VALUES (?, ?, ?, ?)',
         documentId,
         page.uri,
         page.pageNumber,
+        page.textContent,
       );
     }
     return documentId;
@@ -105,6 +108,27 @@ export const getDocuments = async (): Promise<Document[]> => {
     );
   } catch (error) {
     console.error('Erro ao buscar documentos:', error);
+    throw error;
+  }
+};
+
+export const searchDocumentsByText = async (
+  query: string,
+): Promise<Document[]> => {
+  if (!query) return getDocuments();
+  try {
+    const searchPattern = `%${query}%`;
+    return await db.getAllAsync<Document>(
+      `SELECT DISTINCT d.*
+       FROM documents d
+       JOIN pages p ON d.id = p.documentId
+       WHERE p.textContent LIKE ? OR d.name LIKE ?
+       ORDER BY d.createdAt DESC`,
+      searchPattern,
+      searchPattern,
+    );
+  } catch (error) {
+    console.error('Erro ao buscar documentos por texto:', error);
     throw error;
   }
 };

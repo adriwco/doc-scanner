@@ -1,6 +1,12 @@
 // src/screens/ScannerScreen.tsx
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  SafeAreaView,
+} from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { ArrowLeft, VideoOff } from 'lucide-react-native';
 import DocumentScanner from 'react-native-document-scanner-plugin';
@@ -35,16 +41,16 @@ const ScannerScreen = (): React.ReactElement => {
 
   if (hasPermission === null) {
     return (
-      <View className="flex-1 justify-center items-center bg-background">
+      <SafeAreaView className="flex-1 justify-center items-center bg-background">
         <ActivityIndicator size="large" color="#3B82F6" />
         <Text className="text-onSurface mt-2">Verificando permissão...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (hasPermission === false) {
     return (
-      <View className="flex-1 justify-center items-center bg-background p-6">
+      <SafeAreaView className="flex-1 justify-center items-center bg-background p-6">
         <VideoOff size={60} color="#EAEAEA" />
         <Text className="text-onBackground text-xl text-center font-bold mt-4">
           Permissão da Câmera Necessária
@@ -66,15 +72,15 @@ const ScannerScreen = (): React.ReactElement => {
         >
           <ArrowLeft size={28} color="#FFFFFF" />
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View className="flex-1 justify-center items-center bg-background">
+    <SafeAreaView className="flex-1 justify-center items-center bg-background">
       <ActivityIndicator size="large" color="#3B82F6" />
       <Text className="text-onSurface mt-2">Abrindo a câmera...</Text>
-    </View>
+    </SafeAreaView>
   );
 };
 

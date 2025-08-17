@@ -122,11 +122,11 @@ const DocumentDetailScreen = (): React.ReactElement => {
           </Text>
         </View>
 
-        <View className="w-20 flex-row items-center justify-end">
+        <View className="flex-row items-center justify-end min-w-[80px]">
           {isSharing ? (
-            <ActivityIndicator color="#FFFFFF" className="mr-2" />
+            <ActivityIndicator color="#FFFFFF" className="mr-4" />
           ) : (
-            <TouchableOpacity onPress={handleSharePdf} className="p-2">
+            <TouchableOpacity onPress={handleSharePdf} className="p-2 mr-2">
               <Share size={24} color="#FFFFFF" />
             </TouchableOpacity>
           )}

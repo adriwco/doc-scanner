@@ -1,5 +1,5 @@
 // src/screens/HomeScreen.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,12 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Camera, FilePlus } from 'lucide-react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { useDatabase } from '../hooks/useDatabase';
 import DocumentListItem from '../components/DocumentListItem';
 import type { AppNavigationProp } from '../navigation/AppNavigator';
+import type { Document } from '../services/database';
 
 const HomeScreen = (): React.ReactElement => {
   const {
@@ -21,8 +24,10 @@ const HomeScreen = (): React.ReactElement => {
     isDBLoading,
     loadDocuments,
     removeDocument: deleteDocumentFromDb,
+    getPages,
   } = useDatabase();
   const navigation = useNavigation<AppNavigationProp>();
+  const [sharingId, setSharingId] = useState<number | null>(null);
 
   const handleScanPress = (): void => {
     navigation.navigate('Scanner');
@@ -54,6 +59,58 @@ const HomeScreen = (): React.ReactElement => {
         },
       ],
     );
+  };
+
+  const handleShareDocument = async (document: Document) => {
+    if (sharingId) return;
+
+    setSharingId(document.id);
+    try {
+      const pages = await getPages(document.id);
+      if (!pages || pages.length === 0) {
+        Alert.alert('Documento Vazio', 'Não há páginas para compartilhar.');
+        return;
+      }
+
+      const htmlContent = `
+        <html>
+          <body style="margin: 0; padding: 0;">
+            ${pages
+              .map(
+                (page) =>
+                  `<img src="${page.uri}" style="width: 100%; height: auto; display: block; page-break-after: always;" />`,
+              )
+              .join('')}
+          </body>
+        </html>
+      `;
+
+      const { uri: pdfUri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
+      });
+
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert(
+          'Compartilhamento indisponível',
+          'Não é possível compartilhar arquivos neste dispositivo.',
+        );
+        return;
+      }
+
+      await Sharing.shareAsync(pdfUri, {
+        mimeType: 'application/pdf',
+        dialogTitle: `Compartilhar ${document.name}`,
+      });
+    } catch (error) {
+      console.error('Erro ao gerar ou compartilhar PDF:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível gerar o PDF para compartilhamento.',
+      );
+    } finally {
+      setSharingId(null);
+    }
   };
 
   const renderContent = () => {
@@ -89,6 +146,8 @@ const HomeScreen = (): React.ReactElement => {
             item={item}
             onPress={() => handleOpenDocument(item.id)}
             onDelete={() => handleDeleteDocument(item)}
+            onShare={() => handleShareDocument(item)}
+            isSharing={sharingId === item.id}
           />
         )}
         contentContainerStyle={{ paddingBottom: 100, paddingTop: 16 }}

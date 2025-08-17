@@ -1,17 +1,25 @@
 // src/components/DocumentListItem.tsx
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
-import { FileText, Clock, Trash2 } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { FileText, Clock, Trash2, Share2 } from 'lucide-react-native';
 import type { Document } from '../services/database';
 
 interface DocumentListItemProps {
   item: Document;
   onPress: () => void;
   onDelete: () => void;
+  onShare: () => void;
+  isSharing: boolean;
 }
 
 const DocumentListItem = React.memo(
-  ({ item, onPress, onDelete }: DocumentListItemProps) => {
+  ({ item, onPress, onDelete, onShare, isSharing }: DocumentListItemProps) => {
     const formattedDate = new Date(item.createdAt).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
@@ -54,9 +62,20 @@ const DocumentListItem = React.memo(
           </View>
         </View>
 
-        <TouchableOpacity onPress={onDelete} className="p-3 ml-2">
-          <Trash2 size={20} color="#EF4444" />
-        </TouchableOpacity>
+        <View className="flex-row items-center">
+          {isSharing ? (
+            <View className="p-3">
+              <ActivityIndicator color="#3B82F6" />
+            </View>
+          ) : (
+            <TouchableOpacity onPress={onShare} className="p-3">
+              <Share2 size={20} color="#3B82F6" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={onDelete} className="p-3 ml-1">
+            <Trash2 size={20} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     );
   },

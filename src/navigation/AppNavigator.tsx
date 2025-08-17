@@ -9,12 +9,18 @@ import HomeScreen from '../screens/HomeScreen';
 import ScannerScreen from '../screens/ScannerScreen';
 import PreviewScreen from '../screens/PreviewScreen';
 import DocumentDetailScreen from '../screens/DocumentDetailScreen';
+import EditScreen from '../screens/EditScreen';
 
 export type RootStackParamList = {
   Home: undefined;
   Scanner: undefined;
-  Preview: { images: string[] };
+  Preview: {
+    images: string[];
+    editedImageUri?: string;
+    imageKey?: string;
+  };
   DocumentDetail: { documentId: number };
+  Edit: { imageUri: string; imageKey: string };
 };
 
 export type AppNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -35,6 +41,7 @@ const AppNavigator = (): React.ReactElement => {
         <Stack.Screen name="Scanner" component={ScannerScreen} />
         <Stack.Screen name="Preview" component={PreviewScreen} />
         <Stack.Screen name="DocumentDetail" component={DocumentDetailScreen} />
+        <Stack.Screen name="Edit" component={EditScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

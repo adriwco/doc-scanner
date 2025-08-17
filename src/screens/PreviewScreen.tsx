@@ -1,5 +1,5 @@
 // src/screens/PreviewScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { ArrowLeft, Save } from 'lucide-react-native';
+import { ArrowLeft, Save, Edit3 } from 'lucide-react-native';
 import DraggableFlatList, {
   RenderItemParams,
 } from 'react-native-draggable-flatlist';
@@ -35,13 +35,25 @@ const PreviewScreen = (): React.ReactElement => {
   const { createNewDocument } = useDatabase();
 
   const initialImages: ImageItem[] = route.params.images.map((uri, index) => ({
-    key: `image-${index}-${uri}`,
+    key: `image-${index}-${Date.now()}`,
     uri,
   }));
 
   const [documentName, setDocumentName] = useState<string>('');
   const [pages, setPages] = useState<ImageItem[]>(initialImages);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (route.params?.editedImageUri && route.params?.imageKey) {
+      const { editedImageUri, imageKey } = route.params;
+      setPages((currentPages) =>
+        currentPages.map((page) =>
+          page.key === imageKey ? { ...page, uri: editedImageUri } : page,
+        ),
+      );
+      navigation.setParams({ editedImageUri: undefined, imageKey: undefined });
+    }
+  }, [route.params?.editedImageUri, route.params?.imageKey, navigation]);
 
   const handleSave = async () => {
     if (!documentName.trim()) {
@@ -87,6 +99,10 @@ const PreviewScreen = (): React.ReactElement => {
     }
   };
 
+  const handleEditPress = (item: ImageItem) => {
+    navigation.navigate('Edit', { imageUri: item.uri, imageKey: item.key });
+  };
+
   const renderItem = ({
     item,
     drag,
@@ -108,6 +124,12 @@ const PreviewScreen = (): React.ReactElement => {
         <Text className="text-onSurface flex-1">
           Página {pages.findIndex((p) => p.key === item.key) + 1}
         </Text>
+        <TouchableOpacity
+          onPress={() => handleEditPress(item)}
+          className="p-2 ml-2"
+        >
+          <Edit3 size={20} color="#3B82F6" />
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };

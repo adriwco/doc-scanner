@@ -9,9 +9,12 @@ import {
   Image,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Share } from 'lucide-react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { useDatabase } from '../hooks/useDatabase';
 import type { Page } from '../services/database';
 import type {
@@ -33,6 +36,7 @@ const DocumentDetailScreen = (): React.ReactElement => {
 
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSharing, setIsSharing] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   useEffect(() => {
@@ -46,6 +50,52 @@ const DocumentDetailScreen = (): React.ReactElement => {
     loadPages();
   }, [documentId, getPages]);
 
+  const handleSharePdf = async () => {
+    if (!document || pages.length === 0 || isSharing) return;
+
+    setIsSharing(true);
+    try {
+      const htmlContent = `
+        <html>
+          <body style="margin: 0; padding: 0;">
+            ${pages
+              .map(
+                (page) =>
+                  `<img src="${page.uri}" style="width: 100%; height: auto; display: block; page-break-after: always;" />`,
+              )
+              .join('')}
+          </body>
+        </html>
+      `;
+
+      const { uri: pdfUri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
+      });
+
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert(
+          'Compartilhamento indisponível',
+          'Não é possível compartilhar arquivos neste dispositivo.',
+        );
+        return;
+      }
+
+      await Sharing.shareAsync(pdfUri, {
+        mimeType: 'application/pdf',
+        dialogTitle: `Compartilhar ${document.name}`,
+      });
+    } catch (error) {
+      console.error('Erro ao gerar ou compartilhar PDF:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível gerar o PDF para compartilhamento.',
+      );
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   if (isLoading || !document) {
     return (
       <SafeAreaView className="flex-1 bg-background justify-center items-center">
@@ -56,18 +106,31 @@ const DocumentDetailScreen = (): React.ReactElement => {
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      {/* Cabeçalho */}
-      <View className="flex-row items-center justify-between p-4 border-b border-surface">
-        <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
-          <ArrowLeft size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View className="flex-1 items-center">
-          <Text className="text-xl font-bold text-onPrimary" numberOfLines={1}>
+      <View className="flex-row items-center p-4 h-16 border-b border-surface">
+        <View className="w-12">
+          <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
+            <ArrowLeft size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        <View className="flex-1 items-center justify-center">
+          <Text
+            className="text-xl font-bold text-onPrimary px-2"
+            numberOfLines={1}
+          >
             {document.name}
           </Text>
         </View>
-        <View className="w-12 items-center">
-          <Text className="text-onSurface">
+
+        <View className="w-20 flex-row items-center justify-end">
+          {isSharing ? (
+            <ActivityIndicator color="#FFFFFF" className="mr-2" />
+          ) : (
+            <TouchableOpacity onPress={handleSharePdf} className="p-2">
+              <Share size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+          <Text className="text-onSurface text-sm">
             {currentPage}/{pages.length}
           </Text>
         </View>

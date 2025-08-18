@@ -6,12 +6,16 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  SafeAreaView,
   Alert,
   TextInput,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Camera, FilePlus, Search, X } from 'lucide-react-native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useDatabase } from '../hooks/useDatabase';
@@ -32,6 +36,7 @@ const HomeScreen = (): React.ReactElement => {
   const [sharingId, setSharingId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     searchDocuments(debouncedSearchQuery);
@@ -68,7 +73,6 @@ const HomeScreen = (): React.ReactElement => {
 
   const handleShareDocument = async (document: Document) => {
     if (sharingId) return;
-
     setSharingId(document.id);
     try {
       const pages = await getPages(document.id);
@@ -76,24 +80,18 @@ const HomeScreen = (): React.ReactElement => {
         Alert.alert('Documento Vazio', 'Não há páginas para compartilhar.');
         return;
       }
-
       const htmlContent = `
-        <html>
-          <body style="margin: 0; padding: 0;">
-            ${pages
-              .map(
-                (page) =>
-                  `<img src="${page.uri}" style="width: 100%; height: auto; display: block; page-break-after: always;" />`,
-              )
-              .join('')}
-          </body>
-        </html>
-      `;
-
+        <html><body style="margin: 0; padding: 0;">
+          ${pages
+            .map(
+              (page) =>
+                `<img src="${page.uri}" style="width: 100%; height: auto; display: block; page-break-after: always;" />`,
+            )
+            .join('')}
+        </body></html>`;
       const { uri: pdfUri } = await Print.printToFileAsync({
         html: htmlContent,
       });
-
       await Sharing.shareAsync(pdfUri, {
         mimeType: 'application/pdf',
         dialogTitle: `Compartilhar ${document.name}`,
@@ -114,7 +112,6 @@ const HomeScreen = (): React.ReactElement => {
         </View>
       );
     }
-
     if (documents.length === 0) {
       return (
         <View className="flex-1 justify-center items-center p-4">
@@ -130,7 +127,6 @@ const HomeScreen = (): React.ReactElement => {
         </View>
       );
     }
-
     return (
       <FlatList
         data={documents}
@@ -151,42 +147,62 @@ const HomeScreen = (): React.ReactElement => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 p-6">
-        <View className="flex-row justify-between items-center mb-4">
-          <Text className="text-3xl font-bold text-onPrimary">
-            Seus Documentos
-          </Text>
+    <View className="flex-1 bg-background">
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <View className="flex-1 p-6">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-3xl font-bold text-onPrimary">
+              Seus Documentos
+            </Text>
+          </View>
+          <View className="flex-row items-center bg-surface rounded-xl px-4 mb-4">
+            <Search size={20} color="#888" />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Buscar por nome ou conteúdo..."
+              placeholderTextColor="#888"
+              className="flex-1 text-onSurface p-3"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <X size={20} color="#888" />
+              </TouchableOpacity>
+            )}
+          </View>
+          {renderContent()}
         </View>
-
-        <View className="flex-row items-center bg-surface rounded-xl px-4 mb-4">
-          <Search size={20} color="#888" />
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Buscar por nome ou conteúdo..."
-            placeholderTextColor="#888"
-            className="flex-1 text-onSurface p-3"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={20} color="#888" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {renderContent()}
-
-        <TouchableOpacity
-          onPress={handleScanPress}
-          className="absolute bottom-10 right-6 bg-primary h-16 w-16 rounded-full justify-center items-center shadow-lg"
-          activeOpacity={0.8}
-        >
-          <Camera size={28} color="white" />
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+      <TouchableOpacity
+        onPress={handleScanPress}
+        style={[
+          styles.fab,
+          { bottom: insets.bottom > 0 ? insets.bottom + 16 : 32 },
+        ]}
+        activeOpacity={0.8}
+      >
+        <Camera size={28} color="white" />
+      </TouchableOpacity>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  fab: {
+    position: 'absolute',
+    right: 24,
+    height: 64,
+    width: 64,
+    borderRadius: 32,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+});
 
 export default HomeScreen;

@@ -57,7 +57,7 @@ export const useDatabase = () => {
     }
   };
 
-  const searchDocuments = async (query: string): Promise<void> => {
+  const searchDocuments = useCallback(async (query: string): Promise<void> => {
     try {
       setIsDBLoading(true);
       const docs = await dbSearch(query);
@@ -67,7 +67,7 @@ export const useDatabase = () => {
     } finally {
       setIsDBLoading(false);
     }
-  };
+  }, []);
 
   const getPages = useCallback(async (documentId: number): Promise<Page[]> => {
     try {

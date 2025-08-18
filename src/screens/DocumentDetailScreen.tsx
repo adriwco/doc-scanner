@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Share } from 'lucide-react-native';
+import { ArrowLeft, Share2 } from 'lucide-react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useDatabase } from '../hooks/useDatabase';
@@ -46,8 +46,9 @@ const DocumentDetailScreen = (): React.ReactElement => {
       setPages(fetchedPages);
       setIsLoading(false);
     };
-
-    loadPages();
+    if (documentId) {
+      loadPages();
+    }
   }, [documentId, getPages]);
 
   const handleSharePdf = async () => {
@@ -78,6 +79,7 @@ const DocumentDetailScreen = (): React.ReactElement => {
           'Compartilhamento indisponível',
           'Não é possível compartilhar arquivos neste dispositivo.',
         );
+        setIsSharing(false);
         return;
       }
 
@@ -127,7 +129,7 @@ const DocumentDetailScreen = (): React.ReactElement => {
             <ActivityIndicator color="#FFFFFF" className="mr-4" />
           ) : (
             <TouchableOpacity onPress={handleSharePdf} className="p-2 mr-2">
-              <Share size={24} color="#FFFFFF" />
+              <Share2 size={24} color="#FFFFFF" />
             </TouchableOpacity>
           )}
           <Text className="text-onSurface text-sm">
@@ -136,7 +138,6 @@ const DocumentDetailScreen = (): React.ReactElement => {
         </View>
       </View>
 
-      {/* Visualizador de Páginas */}
       <View className="flex-1 justify-center items-center">
         <FlatList
           data={pages}

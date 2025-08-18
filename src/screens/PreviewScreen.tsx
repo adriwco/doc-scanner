@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
-  SafeAreaView,
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { ArrowLeft, Save, Edit3, FileText } from 'lucide-react-native';
 import DraggableFlatList, {
@@ -18,6 +18,7 @@ import DraggableFlatList, {
 import * as FileSystem from 'expo-file-system';
 import Ocr from 'react-native-mlkit-ocr';
 import { useDatabase } from '../hooks/useDatabase';
+import { useToast } from '../context/ToastContext';
 import type {
   AppNavigationProp,
   RootStackParamList,
@@ -38,6 +39,7 @@ const PreviewScreen = (): React.ReactElement => {
   const navigation = useNavigation<AppNavigationProp>();
   const route = useRoute<PreviewScreenRouteProp>();
   const { createNewDocument } = useDatabase();
+  const { showToast } = useToast();
 
   const initialImages: ImageItem[] = route.params.images.map((uri, index) => ({
     key: `image-${index}-${Date.now()}`,
@@ -102,7 +104,10 @@ const PreviewScreen = (): React.ReactElement => {
 
       await createNewDocument(newDocData, processedPages);
 
-      navigation.navigate('Home');
+      showToast('Documento salvo com sucesso!');
+      setTimeout(() => {
+        navigation.navigate('Home');
+      }, 500);
     } catch (error) {
       console.error('Erro ao salvar o documento:', error);
       Alert.alert('Erro', 'Não foi possível salvar e processar o documento.');

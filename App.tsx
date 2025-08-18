@@ -4,8 +4,10 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useDatabase } from './src/hooks/useDatabase';
 import AppNavigator from './src/navigation/AppNavigator';
+import { ToastProvider } from './src/context/ToastContext';
 
 const App = (): React.ReactElement => {
   const { isDBLoading } = useDatabase();
@@ -21,10 +23,14 @@ const App = (): React.ReactElement => {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AppNavigator />
-      <StatusBar style="light" />
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ToastProvider>
+          <AppNavigator />
+          <StatusBar style="light" />
+        </ToastProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 };
 

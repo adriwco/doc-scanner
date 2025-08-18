@@ -1,5 +1,5 @@
 // src/screens/DocumentDetailScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,11 @@ import {
   ActivityIndicator,
   Dimensions,
   Alert,
+  TextInput,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2 } from 'lucide-react-native';
+import { ArrowLeft, Share2, Edit3, Check } from 'lucide-react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useDatabase } from '../hooks/useDatabase';
@@ -29,7 +30,7 @@ const { width: screenWidth } = Dimensions.get('window');
 const DocumentDetailScreen = (): React.ReactElement => {
   const navigation = useNavigation<AppNavigationProp>();
   const route = useRoute<DetailScreenRouteProp>();
-  const { getPages, documents } = useDatabase();
+  const { getPages, documents, updateDocumentName } = useDatabase();
 
   const { documentId } = route.params;
   const document = documents.find((doc) => doc.id === documentId);
@@ -38,6 +39,21 @@ const DocumentDetailScreen = (): React.ReactElement => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSharing, setIsSharing] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [isEditingName, setIsEditingName] = useState<boolean>(false);
+  const [editedName, setEditedName] = useState(document?.name || '');
+  const textInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (document && editedName !== document.name) {
+      setEditedName(document.name);
+    }
+  }, [document]);
+
+  useEffect(() => {
+    if (isEditingName) {
+      textInputRef.current?.focus();
+    }
+  }, [isEditingName]);
 
   useEffect(() => {
     const loadPages = async () => {
@@ -50,6 +66,19 @@ const DocumentDetailScreen = (): React.ReactElement => {
       loadPages();
     }
   }, [documentId, getPages]);
+
+  const handleSaveName = async () => {
+    if (!document || !editedName.trim()) {
+      Alert.alert('Erro', 'O nome do documento não pode ficar em branco.');
+      setEditedName(document?.name || '');
+      setIsEditingName(false);
+      return;
+    }
+    if (document.name !== editedName.trim()) {
+      await updateDocumentName(document.id, editedName.trim());
+    }
+    setIsEditingName(false);
+  };
 
   const handleSharePdf = async () => {
     if (!document || pages.length === 0 || isSharing) return;
@@ -116,23 +145,53 @@ const DocumentDetailScreen = (): React.ReactElement => {
         </View>
 
         <View className="flex-1 items-center justify-center">
-          <Text
-            className="text-xl font-bold text-onPrimary px-2"
-            numberOfLines={1}
-          >
-            {document.name}
-          </Text>
+          {isEditingName ? (
+            <TextInput
+              ref={textInputRef}
+              value={editedName}
+              onChangeText={setEditedName}
+              className="text-xl font-bold text-onSurface px-2 py-1 bg-surface rounded-md w-full text-center"
+              selectionColor="#3B82F6"
+              onSubmitEditing={handleSaveName}
+              onBlur={handleSaveName}
+            />
+          ) : (
+            <Text
+              className="text-xl font-bold text-onPrimary px-2"
+              numberOfLines={1}
+            >
+              {document.name}
+            </Text>
+          )}
         </View>
 
-        <View className="flex-row items-center justify-end min-w-[80px]">
+        <View className="flex-row items-center justify-end min-w-[120px]">
           {isSharing ? (
             <ActivityIndicator color="#FFFFFF" className="mr-4" />
           ) : (
-            <TouchableOpacity onPress={handleSharePdf} className="p-2 mr-2">
-              <Share2 size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                onPress={() => {
+                  if (isEditingName) {
+                    handleSaveName();
+                  } else {
+                    setIsEditingName(true);
+                  }
+                }}
+                className="p-2"
+              >
+                {isEditingName ? (
+                  <Check size={24} color="#3B82F6" />
+                ) : (
+                  <Edit3 size={24} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSharePdf} className="p-2">
+                <Share2 size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </>
           )}
-          <Text className="text-onSurface text-sm">
+          <Text className="text-onSurface text-sm ml-1">
             {currentPage}/{pages.length}
           </Text>
         </View>

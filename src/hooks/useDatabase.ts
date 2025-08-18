@@ -1,5 +1,6 @@
 // src/hooks/useDatabase.ts
 import { useState, useEffect, useCallback } from 'react';
+import { LayoutAnimation, Platform, UIManager } from 'react-native';
 import {
   initDatabase,
   getDocuments,
@@ -7,18 +8,30 @@ import {
   deleteDocument as dbDeleteDocument,
   getPagesForDocument as dbGetPages,
   searchDocumentsByText as dbSearch,
+  updateDocumentName as dbUpdateName,
   type Document,
   type Page,
 } from '../services/database';
+
+if (Platform.OS === 'android') {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
 
 export const useDatabase = () => {
   const [isDBLoading, setIsDBLoading] = useState<boolean>(true);
   const [documents, setDocuments] = useState<Document[]>([]);
 
+  const applyAnimation = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  };
+
   const loadDocuments = useCallback(async () => {
     try {
       await initDatabase();
       const docs = await getDocuments();
+      applyAnimation();
       setDocuments(docs);
     } catch (error) {
       console.error(
@@ -57,10 +70,24 @@ export const useDatabase = () => {
     }
   };
 
+  const updateDocumentName = useCallback(
+    async (id: number, name: string): Promise<void> => {
+      try {
+        await dbUpdateName(id, name);
+        await loadDocuments();
+      } catch (error) {
+        console.error('Falha ao atualizar o nome do documento.', error);
+        throw error;
+      }
+    },
+    [loadDocuments],
+  );
+
   const searchDocuments = useCallback(async (query: string): Promise<void> => {
     try {
       setIsDBLoading(true);
       const docs = await dbSearch(query);
+      applyAnimation();
       setDocuments(docs);
     } catch (error) {
       console.error('Falha ao buscar documentos.', error);
@@ -89,5 +116,6 @@ export const useDatabase = () => {
     removeDocument,
     getPages,
     searchDocuments,
+    updateDocumentName,
   };
 };

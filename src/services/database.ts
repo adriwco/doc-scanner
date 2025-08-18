@@ -57,10 +57,25 @@ export const initDatabase = async (): Promise<void> => {
         documentId INTEGER NOT NULL,
         uri TEXT NOT NULL,
         pageNumber INTEGER NOT NULL,
-        textContent TEXT, -- Nova coluna
+        textContent TEXT,
         FOREIGN KEY (documentId) REFERENCES documents(id) ON DELETE CASCADE
       );
     `);
+
+    const columns = await db.getAllAsync<{ name: string }>(
+      `PRAGMA table_info(pages)`,
+    );
+    const hasTextContentColumn = columns.some(
+      (column) => column.name === 'textContent',
+    );
+
+    if (!hasTextContentColumn) {
+      console.log(
+        "Migrando o banco de dados: Adicionando a coluna 'textContent' à tabela 'pages'.",
+      );
+      await db.execAsync('ALTER TABLE pages ADD COLUMN textContent TEXT;');
+    }
+
     console.log('Banco de dados inicializado com sucesso');
   } catch (error) {
     console.error('Erro ao inicializar o banco de dados:', error);
@@ -97,6 +112,18 @@ export const addDocument = async (
     if (documentId) {
       await deleteDocument(documentId);
     }
+    throw error;
+  }
+};
+
+export const updateDocumentName = async (
+  id: number,
+  name: string,
+): Promise<void> => {
+  try {
+    await db.runAsync('UPDATE documents SET name = ? WHERE id = ?', name, id);
+  } catch (error) {
+    console.error(`Erro ao atualizar o nome do documento ${id}:`, error);
     throw error;
   }
 };

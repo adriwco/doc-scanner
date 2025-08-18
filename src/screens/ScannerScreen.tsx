@@ -1,11 +1,12 @@
 // src/screens/ScannerScreen.tsx
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
+  Platform,
 } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { ArrowLeft, VideoOff } from 'lucide-react-native';
@@ -17,15 +18,17 @@ const ScannerScreen = (): React.ReactElement => {
   const navigation = useNavigation<AppNavigationProp>();
   const { hasPermission, requestPermission } = useCameraPermission();
   const isFocused = useIsFocused();
+  const isScanning = useRef(false);
 
   const startScan = useCallback(async () => {
-    if (!isFocused || !hasPermission) return;
+    if (isScanning.current) return;
+    isScanning.current = true;
 
     try {
       const { scannedImages } = await DocumentScanner.scanDocument({});
 
       if (scannedImages && scannedImages.length > 0) {
-        navigation.navigate('Preview', { images: scannedImages });
+        navigation.replace('Preview', { images: scannedImages });
       } else {
         navigation.goBack();
       }
@@ -33,11 +36,19 @@ const ScannerScreen = (): React.ReactElement => {
       console.error('Erro ao escanear o documento:', error);
       navigation.goBack();
     }
-  }, [isFocused, hasPermission, navigation]);
+  }, [navigation]);
 
   useEffect(() => {
-    startScan();
-  }, [hasPermission, isFocused]);
+    if (isFocused && hasPermission) {
+      if (Platform.OS === 'android') {
+        setTimeout(() => {
+          startScan();
+        }, 100);
+      } else {
+        startScan();
+      }
+    }
+  }, [isFocused, hasPermission, startScan]);
 
   if (hasPermission === null) {
     return (
